@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
 # Load the dataset
-car_data = pd.read_csv(r'C:\Users\Aditya\Desktop\Arundhati\car_recommendation_project\dataset.csv')
+car_data = pd.read_csv(r'dataset.csv')
 
 # Clean column names
 car_data.columns = car_data.columns.str.strip()

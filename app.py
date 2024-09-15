@@ -29,7 +29,7 @@ customer_collection = db['customerrequirementinputs']
 recommendation_collection = db['recommendationresults']
 
 # Load dataset (Ensure this path is correct for your environment)
-dataset_path = os.getenv('DATASET_PATH', r'C:\Users\Aditya\Desktop\Arundhati\car_recommendation_project\dataset.csv')
+dataset_path = os.getenv('DATASET_PATH', r'dataset.csv')
 
 # Load the dataset
 try:
