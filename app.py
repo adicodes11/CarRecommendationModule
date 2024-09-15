@@ -29,7 +29,7 @@ customer_collection = db['customerrequirementinputs']
 recommendation_collection = db['recommendationresults']
 
 # Load dataset (Ensure this path is correct for your environment)
-dataset_path = os.path.join(os.path.dirname(__file__), 'dataset.csv')
+dataset_path = os.getenv('DATASET_PATH', r'C:\Users\Aditya\Desktop\Arundhati\car_recommendation_project\dataset.csv')
 
 # Load the dataset
 try:
@@ -85,18 +85,21 @@ def get_closest_cars(decoded_cars, filtered_data, n=5):
 
 @app.route('/recommendations', methods=['POST'])
 def recommendations():
-    # Get the requirement ID from the incoming request
+    # Get the sessionId and requirement ID from the incoming request
     data = request.json
     requirement_id = data.get('_id')  # Expecting the '_id' as the identifier
+    session_id = data.get('sessionId')  # Expecting the sessionId from the request
 
     if not requirement_id:
         return jsonify({"error": "Requirement ID is missing"}), 400
+    if not session_id:
+        return jsonify({"error": "Session ID is missing"}), 400
 
     # Fetch customer input from MongoDB based on requirement ID
     try:
         customer_input = customer_collection.find_one({"_id": ObjectId(requirement_id)})
-    except:
-        return jsonify({"error": "Invalid Requirement ID format."}), 400
+    except Exception as e:
+        return jsonify({"error": "Invalid Requirement ID or Session ID format."}), 400
 
     if not customer_input:
         return jsonify({"error": "Customer input not found for this requirement."}), 404
@@ -148,14 +151,10 @@ def recommendations():
     # Get the closest matches from the filtered car data
     top_recommendations = get_closest_cars(decoded_cars, filtered_cars, n=20)
 
-    # Fetch existing recommendations (if any) to count the current number
-    existing_recommendations = recommendation_collection.find_one({"createdBy": customer_input['createdBy']})
-    current_recommendation_count = len(existing_recommendations['recommendations']) if existing_recommendations else 0
-
     # Structure to store all recommendations under a single document for the user
     recommendations_to_add = [
         {
-            "recommendationId": f"recommendation{current_recommendation_count + idx + 1}",
+            "recommendationId": f"recommendation{idx + 1}",
             "Car Model": car.get('Model', ''),
             "Version": car.get('Version', ''),
             "Ex-Showroom Price": car.get('Ex-Showroom Price', 0),
@@ -166,21 +165,14 @@ def recommendations():
         for idx, car in enumerate(top_recommendations.to_dict(orient='records'))
     ]
 
-    if existing_recommendations:
-        recommendation_collection.update_one(
-            {"createdBy": customer_input['createdBy']},
-            {"$set": {
-                "recommendations": existing_recommendations['recommendations'] + recommendations_to_add,
-                "updatedAt": datetime.utcnow()
-            }}
-        )
-    else:
-        recommendation_collection.insert_one({
-            "createdBy": customer_input['createdBy'],
-            "recommendations": recommendations_to_add,
-            "createdAt": datetime.utcnow(),
-            "updatedAt": datetime.utcnow()
-        })
+    # Insert a new recommendation document for each session
+    recommendation_collection.insert_one({
+        "createdBy": customer_input['createdBy'],  # Reference the user
+        "sessionId": session_id,  # Track the sessionId
+        "recommendations": recommendations_to_add,
+        "createdAt": datetime.utcnow(),
+        "updatedAt": datetime.utcnow()
+    })
 
     return jsonify({"message": "Recommendations generated and stored successfully."}), 200
 
