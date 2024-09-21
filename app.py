@@ -12,7 +12,7 @@ from datetime import datetime
 import warnings
 from flask_cors import CORS
 
-# Suppress warnings and logs
+# Suppress TensorFlow warnings and logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 warnings.filterwarnings("ignore", message="This is a development server.")
 
@@ -177,4 +177,7 @@ def recommendations():
     return jsonify({"message": "Recommendations generated and stored successfully."}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Get the port number from the environment variable, default to 5000 if not set
+    port = int(os.environ.get('PORT', 5000))
+    # Run the Flask app on all available interfaces and the specified port
+    app.run(host='0.0.0.0', port=port)
